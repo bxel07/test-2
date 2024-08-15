@@ -12,18 +12,30 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('documents', function (Blueprint $table) {
-            $table->id(); // Primary key for the document
-            $table->string('id_dipotong'); // Corresponds to ID_DIPOTONG
-            $table->string('nama'); // Corresponds to NAMA
-            $table->string('pasal'); // Corresponds to PASAL
-            $table->string('kode_objek_pajak'); // Corresponds to KODE_OBJEK_PAJAK
-            $table->string('no_bukti_potong'); // Corresponds to NO_BUKTI_POTONG
-            $table->date('tanggal_bupot'); // Corresponds to TANGGAL_BUPOT
-            $table->decimal('pph_dipotong', 10, 2); // Corresponds to PPH_DIPOTONG
-            $table->decimal('jumlah_bruto', 15, 2); // Corresponds to JUMLAH_BRUTO
-            $table->text('keterangan'); // Corresponds to KETERANGAN
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Foreign key to users table
-            $table->timestamps(); // Created at and updated at columns
+            $table->id(); 
+            $table->string('no_bukti'); 
+            $table->date('tanggal_bukti'); 
+            $table->bigInteger('npwp_pemotong'); 
+            $table->string('nama_pemotong'); 
+
+            $table->string('identitas_penerima'); 
+            $table->string('nama_penerima'); 
+            $table->bigInteger('penghasilan_bruto'); 
+            $table->bigInteger('pph'); 
+
+            $table->string('kode_objek_pajak');
+            $table->string('pasal'); 
+            $table->integer('masa_pajak');
+            $table->string('periode');
+            $table->string('tahun_pajak');
+
+            $table->string('status');
+            $table->integer('rev_no');
+            $table->string('posting');
+            $table->string('id_sistem');
+
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Foreign key to users table
+            $table->timestamps(); 
         });
     }
 
@@ -35,3 +47,16 @@ return new class extends Migration
         Schema::dropIfExists('documents');
     }
 };
+
+// $table->string('id_dipotong'); 
+// $table->string('nama'); 
+// $table->string('pasal'); 
+// $table->string('kode_objek_pajak'); 
+// $table->string('no_bukti_potong'); 
+// $table->date('tanggal_bupot'); 
+// $table->decimal('pph_dipotong', 10, 2); 
+// $table->decimal('jumlah_bruto', 15, 2); 
+// $table->text('keterangan'); 
+
+// $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Foreign key to users table
+// $table->timestamps(); 
