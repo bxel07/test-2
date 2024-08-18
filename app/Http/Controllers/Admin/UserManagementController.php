@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class UserManagementController extends Controller
 {
@@ -14,7 +15,9 @@ class UserManagementController extends Controller
      */
     public function index()
     {
-        $users = User::paginate(10);
+        $users =User::orderBy('created_at', 'asc')
+        ->orderBy('id', 'asc')
+        ->paginate(10);
         return view("admin.userManagement", compact('users'));
     }
 
@@ -39,6 +42,7 @@ class UserManagementController extends Controller
                 'nama' => 'required|string|max:255',
                 'alamat' => 'required|string|max:255',
                 'status' => 'required|in:user,admin',
+                'active' => 'required|boolean',
             ]);
 
             User::create([
@@ -47,6 +51,7 @@ class UserManagementController extends Controller
                 'nama' => $validate['nama'],
                 'alamat' => $validate['alamat'],
                 'status' => $validate['status'],
+                'active' => $validate['active'],
             ]);
 
             return redirect()->back()->with('success', 'User added successfully!');
@@ -69,7 +74,8 @@ class UserManagementController extends Controller
      */
     public function edit($id)
     {
-        $user = User::findOrFail($id)->first();
+        $user = User::findOrFail($id);
+    
         return view('admin.editPage', compact('user'));
     }
     /**
@@ -80,15 +86,22 @@ class UserManagementController extends Controller
                
         $user = User::findOrFail($id);
 
-        $validatedData = $request->validate([
-            'npwp' => 'required',
-            'nama' => 'required',
-            'alamat' => 'required',
-            'status' => 'required|in:user,admin',
-        ]);
+        try{
+            $validatedData = $request->validate([
+                'npwp' => 'required',
+                'nama' => 'required',
+                'alamat' => 'required',
+                'status' => 'required|in:user,admin',
+                'active' => 'required|boolean',
+            ]);
+    
+            $user->update($validatedData);
+            return redirect()->route('user-management.index')->with('success', 'User updated successfully');
+        }catch(ValidationException $e){
+            return redirect()->route('user-management.index')->with('error', $e->validator->errors()->first());
 
-        $user->update($validatedData);
-        return redirect()->route('user-management.index')->with('success', 'User updated successfully');
+        }
+       
     }
 
     /**

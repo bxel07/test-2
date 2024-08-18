@@ -16,9 +16,14 @@ class User
     public function handle(Request $request, Closure $next): Response
     {
         if (auth()->check()) {
+            if (!auth()->user()->active) {
+                return to_route('suspended');
+            }
+            
             if (auth()->user()->status != "user") {
                 return to_route('admin.dashboard');
             }
+
             return $next($request);
         }
 

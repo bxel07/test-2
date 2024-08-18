@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('nama');
             $table->string('alamat');
             $table->enum('status',['user', 'admin']);
+            $table->boolean('active')->default(true);
             $table->rememberToken();
             $table->timestamps();
         });

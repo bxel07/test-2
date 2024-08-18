@@ -9,7 +9,7 @@
                     <svg class="h-3.5 w-3.5 mr-2" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path clip-rule="evenodd" fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
                     </svg>
-                    Add product
+                    Add Users
                 </button>
                
             </div>       
@@ -23,6 +23,8 @@
                         <th scope="col" class="px-4 py-3">Nama</th>
                         <th scope="col" class="px-4 py-3">Alamat</th>
                         <th scope="col" class="px-4 py-3">Status</th>
+                        <th scope="col" class="px-4 py-3">Active</th>
+
                         <th scope="col" class="px-4 py-3">
                             <span class="sr-only">Actions</span>
                         </th>
@@ -36,6 +38,8 @@
                         <td class="px-4 py-3">{{ $user->nama }}</td>
                         <td class="px-4 py-3">{{ $user->alamat }}</td>
                         <td class="px-4 py-3">{{ $user->status }}</td>
+                        <td class="px-4 py-3">{{ $user->active }}</td>
+                        
                         <td class="px-4 py-3 flex items-center justify-end">
                             <button id="user-{{ $user->id }}-dropdown-button" data-dropdown-toggle="user-{{ $user->id }}-dropdown" class="inline-flex items-center text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 dark:hover-bg-gray-800 text-center text-gray-500 hover:text-gray-800 rounded-lg focus:outline-none dark:text-gray-400 dark:hover:text-gray-100" type="button">
                                 <svg class="w-5 h-5" aria-hidden="true" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">

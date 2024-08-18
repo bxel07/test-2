@@ -28,30 +28,23 @@ class UploadController extends Controller
             'excel_file' => 'nullable|mimes:xlsx,xls',
             'zip_file' => 'nullable|mimes:zip',
         ]);
-    
+
+        // check mapped post file 
+        if( $request->hasFile('excel_file') ){
+            return $this->mapExcel($request);
+        }else{
+           return  $this->mapZip($request);
+        }
+    }
+
+
+    private function mapExcel(Request $request){
         try {
             // Handle Excel file
             $excelFile = $request->file('excel_file');
             $excelFileName = time() . '_' . $excelFile->getClientOriginalName();
             $excelPath = $excelFile->storeAs('uploads/excel', $excelFileName, 'public');
-    
-            // Handle ZIP file (optional)
-            if ($request->hasFile('zip_file')) {
-                $zipFile = $request->file('zip_file');
-                $zipFileName = time() . '_' . $zipFile->getClientOriginalName();
-                $zipPath = $zipFile->storeAs('uploads/zip', $zipFileName, 'public');
-    
-                // Extract ZIP file
-                $zip = new ZipArchive;
-                $zipFullPath = storage_path('app/public/' . $zipPath);
-                if ($zip->open($zipFullPath) === TRUE) {
-                    $zip->extractTo(storage_path('app/public/uploads/extracted/' . pathinfo($zipFileName, PATHINFO_FILENAME)));
-                    $zip->close();
-                } else {
-                    throw new \Exception('Failed to open ZIP file.');
-                }
-            }
-    
+
             // Read Excel file
             try {
                 $spreadsheet = IOFactory::load(storage_path('app/public/' . $excelPath));
@@ -62,7 +55,6 @@ class UploadController extends Controller
                 return redirect()->back()->with('error', 'Failed to read the Excel file.');
             }
     
-            // PDF and per-row Excel generation
             foreach ($rows as $index => $row) {
                 if ($index === 0) continue; // Skip header row
                 $tanggalBupot = isset($row[1]) ? Carbon::createFromFormat('d/m/Y', $row[1])->format('Y-m-d') : null;
@@ -105,12 +97,179 @@ class UploadController extends Controller
                     continue; // Skip this row if saving to database fails
                 }
             }
-            return redirect()->back()->with('success', 'Files uploaded and processed successfully.');
+            return redirect()->route('admin.upload.form')->with('success','An upload file success');
         } catch (\Exception $e) {
             Log::error('Error during upload process: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred during the upload process.');
         }
     }
+
+    public function mapZip(Request $request)
+    {
+        try {
+            // Handle ZIP file upload and extraction
+            $extractPath = $this->handleZipFile($request->file('zip_file'));
+
+            // Process extracted PDF files
+            $this->processExtractedDirectories($extractPath);
+
+            return redirect()->route('admin.upload.form')->with('success', 'An upload file success');
+        } catch (\Exception $e) {
+            Log::error('Error in mapZip function: ' . $e->getMessage());
+            return response()->json(['error' => 'An error occurred while processing the ZIP file.'], 500);
+        }
+    }
+
+    private function handleZipFile($zipFile)
+    {
+        if (!$zipFile) {
+            throw new \Exception('No ZIP file uploaded.');
+        }
+
+        $zipFileName = time() . '_' . $zipFile->getClientOriginalName();
+        $zipPath = $zipFile->storeAs('uploads/zip', $zipFileName, 'public');
+
+        // Create a unique directory for extraction
+        $uniqueDir = 'extracted_' . Str::random(10) . '_' . time();
+        $extractPath = storage_path('app/public/uploads/' . $uniqueDir);
+
+        // Extract the ZIP file
+        $this->extractZip($zipPath, $extractPath);
+
+        return $extractPath;
+    }
+
+    private function extractZip($zipPath, $extractPath)
+    {
+        $zip = new ZipArchive;
+        $zipFullPath = storage_path('app/public/' . $zipPath);
+
+        if ($zip->open($zipFullPath) === TRUE) {
+            $zip->extractTo($extractPath);
+            $zip->close();
+        } else {
+            throw new \Exception('Failed to open ZIP file.');
+        }
+    }
+
+    private function processExtractedDirectories($extractPath)
+    {
+        $parser = new \Smalot\PdfParser\Parser();
+        $extractedDirs = array_diff(scandir($extractPath), ['.', '..']);
+
+        foreach ($extractedDirs as $dir) {
+            $dirPath = $extractPath . '/' . $dir;
+
+            if (is_dir($dirPath)) {
+                $this->processDirectory($dirPath, $parser);
+            } else {
+                Log::warning('Expected a directory but found: ' . $dirPath);
+            }
+        }
+    }
+
+    private function processDirectory($dirPath, $parser)
+    {
+        $pdfFiles = glob($dirPath . '/*.pdf');
+
+        if (empty($pdfFiles)) {
+            Log::warning('No PDF files found in directory: ' . $dirPath);
+            return;
+        }
+
+        foreach ($pdfFiles as $pdfPath) {
+            $this->processPdfFile($pdfPath, $parser);
+        }
+    }
+
+    private function processPdfFile($pdfPath, $parser)
+    {
+        try {
+            $pdf = $parser->parseFile($pdfPath);
+            $text = $pdf->getText();
+            Log::info('Extracted text from PDF: ' . $text);
+
+            $data = $this->extractDataFromText($text);
+            $mappedData = $this->mapDataToFields($data);
+
+            if (!empty($mappedData['no_bukti'])) {
+                Document::updateOrCreate(
+                    ['no_bukti' => $mappedData['no_bukti']],
+                    $mappedData
+                );
+            } else {
+                Log::warning('No valid data found in PDF: ' . $pdfPath);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error processing PDF file: ' . $pdfPath . ' - ' . $e->getMessage());
+        }
+    }
+
+    private function extractDataFromText($text)
+    {
+        $lines = explode("\n", $text);
+        $data = [];
+
+        foreach ($lines as $line) {
+            if (strpos($line, ':') !== false) {
+                [$key, $value] = explode(':', $line, 2);
+                $key = trim($key);
+                $value = trim($value);
+
+                // Convert currency strings to numeric values
+                if (strpos($value, 'Rp') !== false) {
+                    $value = str_replace(['Rp', '.', ','], '', $value);
+                    $value = (int) $value;
+                }
+
+                $data[$key] = $value;
+            }
+        }
+
+        return array_change_key_case($data, CASE_LOWER);
+    }
+
+    private function mapDataToFields($data)
+    {
+        return [
+            'no_bukti' => $data['no bukti'] ?? null,
+            'tanggal_bukti' => $data['tanggal bukti'] ?? null,
+            'npwp_pemotong' => $data['npwp pemotong'] ?? null,
+            'nama_pemotong' => $data['nama pemotong'] ?? null,
+            'identitas_penerima' => $data['identitas penerima'] ?? null,
+            'nama_penerima' => $data['nama penerima'] ?? null,
+            'penghasilan_bruto' => $data['penghasilan bruto'] ?? null,
+            'pph' => $data['pph'] ?? null,
+            'kode_objek_pajak' => $data['kode objek pajak'] ?? null,
+            'pasal' => $data['pasal'] ?? null,
+            'masa_pajak' => $data['masa pajak'] ?? null,
+            'periode' => $data['periode'] ?? null,
+            'tahun_pajak' => $data['tahun pajak'] ?? null,
+            'status' => $data['status'] ?? null,
+            'rev_no' => $data['rev no'] ?? null,
+            'posting' => $data['posting'] ?? null,
+            'id_sistem' => $data['id sistem'] ?? null,
+            'user_id' => $data['user id'] ?? null,
+        ];
+    }
+
+    // Optional cleanup function
+    private function cleanupExtractedFiles($path)
+    {
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+    
+        foreach ($files as $fileinfo) {
+            $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+            $todo($fileinfo->getRealPath());
+        }
+    
+        rmdir($path);
+    }
+
+
     
     public function index()
     {

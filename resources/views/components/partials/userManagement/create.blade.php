@@ -45,6 +45,13 @@
                             <option value="admin">Admin</option>
                         </select>
                     </div>
+                    <div>
+                        <label for="active" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Active</label>
+                        <select name="active" id="active" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                            <option value="1">Active</option>
+                            <option value="0">Suspend</option>
+                        </select>
+                    </div>
                 </div>
                 <button type="submit" class="inline-flex items-center bg-blue-600 text-blue-600 hover:text-white hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                     <svg class="mr-1 -ml-1 w-6 h-6" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">

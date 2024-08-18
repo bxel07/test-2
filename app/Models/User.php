@@ -21,7 +21,8 @@ class User extends Authenticatable
         'password',
         'nama',
         'alamat',
-        'status'
+        'status',
+        'active'
     ];
 
     public function document()

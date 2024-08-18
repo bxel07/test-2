@@ -10,7 +10,11 @@ use App\Http\Controllers\Admin\UploadController;
 
 Route::get('/', function () {
     return view('landing');
-});
+})->name('landing');
+
+Route::get('/suspend', function () {
+    return view('suspend');
+})->name('suspended');
 
 Route::get('/admin/dashboard', function () {
     return view('admin/dashboard');

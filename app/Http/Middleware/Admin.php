@@ -16,11 +16,15 @@ class Admin
     public function handle(Request $request, Closure $next): Response
     {
         if (auth()->check()) {
+            if (!auth()->user()->active) {
+                return to_route('suspended');
+            }
+            
             if (auth()->user()->status != "admin") {
                 return to_route('user.dashboard');
-            }else{
-                return $next($request);
             }
+
+            return $next($request);
         }
 
         return to_route('login');

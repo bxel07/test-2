@@ -19,14 +19,16 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password1'),
                 'nama' => 'John Doe',
                 'alamat' => '123 Main St, City A',
-                'status' => 'admin'
+                'status' => 'admin',
+                'active' => 'true'
             ],
             [
                 'npwp' => '955805077086000',
                 'password' => Hash::make('password2'),
                 'nama' => 'Jane Smith',
                 'alamat' => '456 Elm St, City B',
-                'status' => 'user'
+                'status' => 'user',
+                'active' => 'true'
             ]
         ];
 
