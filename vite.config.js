@@ -7,6 +7,10 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
+                'resources/css/loopple.css',
+                'resources/css/theme.css',
+                'resources/js/loopple.js'
+
             ],
             refresh: true,
         }),
