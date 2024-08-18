@@ -28,7 +28,8 @@
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
             <main>
-                @if(auth()->user()->role === 'admin')
+                @if(auth()->user()->status === 'admin')
+                    
                     <x-partials.dashboard.aside></x-partials.dashboard.aside>
                 @else
                     <x-partials.dashboard.aside-user></x-partials.dashboard.aside-user>
