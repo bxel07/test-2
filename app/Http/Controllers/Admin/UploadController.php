@@ -25,7 +25,7 @@ class UploadController extends Controller
     
     public function upload(Request $request){
         $request->validate([
-            'excel_file' => 'required|mimes:xlsx,xls',
+            'excel_file' => 'nullable|mimes:xlsx,xls',
             'zip_file' => 'nullable|mimes:zip',
         ]);
     
@@ -62,51 +62,9 @@ class UploadController extends Controller
                 return redirect()->back()->with('error', 'Failed to read the Excel file.');
             }
     
-            // Ensure directories exist
-            $generatedExcelPath = storage_path('app/public/uploads/generated_excel');
-            $generatedPdfPath = storage_path('app/public/uploads/generated_pdf');
-            if (!is_dir($generatedExcelPath)) {
-                mkdir($generatedExcelPath, 0755, true);
-            }
-            if (!is_dir($generatedPdfPath)) {
-                mkdir($generatedPdfPath, 0755, true);
-            }
-    
-            // Create new Excel file
-            $newSpreadsheet = new Spreadsheet();
-            $newSheet = $newSpreadsheet->getActiveSheet();
-            $newSheet->setTitle('Formatted Data');
-    
-            // Define header row
-            $header = [
-                'ID_DIPOTONG', 'NAMA', 'PASAL', 'KODE_OBJEK_PAJAK', 'NO_BUKTI_POTONG', 'TANGGAL_BUPOT', 'PPH_DIPOTONG', 'JUMLAH_BRUTO', 'KETERANGAN'
-            ];
-
-            $newSheet->fromArray($header, NULL, 'A1');
-    
-            // Add rows with data
-            $rowNumber = 2; // Start after header
-            foreach ($rows as $index => $row) {
-                if ($index === 0) continue; // Skip header row
-                $newSheet->fromArray($row, NULL, "A$rowNumber");
-                $rowNumber++;
-            }
-    
-            // Save the formatted Excel file
-            $formattedExcelFileName = 'formatted_data.xlsx';
-            $formattedExcelFilePath = $generatedExcelPath . '/' . $formattedExcelFileName;
-            $excelWriter = new Xlsx($newSpreadsheet);
-            $excelWriter->save($formattedExcelFilePath);
-    
             // PDF and per-row Excel generation
             foreach ($rows as $index => $row) {
                 if ($index === 0) continue; // Skip header row
-    
-                // Extract necessary fields
-                $npwpPemotong = $row[0] ?? ''; // Example column for NPWP_PEMOTONG
-                $identitasPenerima = $row[3] ?? ''; // Example column for IDENTITAS_PENERIMA
-                
-                // Convert date format from DD/MM/YYYY to YYYY-MM-DD
                 $tanggalBupot = isset($row[1]) ? Carbon::createFromFormat('d/m/Y', $row[1])->format('Y-m-d') : null;
     
                 // Find the user based on ID_DIPOTONG
@@ -115,72 +73,6 @@ class UploadController extends Controller
                 if (!$user) {
                     Log::warning('No user found for NPWP: ' . ($row[4] ?? ''));
                     continue; // Skip this row if user is not found
-                }
-    
-                // Format filenames
-                $formattedNpwp = substr($npwpPemotong, 0, 12);
-                $formattedIdentitas = substr($identitasPenerima, 0, 12);
-                $randomId = \Str::uuid()->toString(); // Generate random UUID
-    
-                // Generate PDF file
-                $pdfFileName = "{$formattedNpwp}_{$formattedIdentitas}_{$randomId}.pdf";
-                $pdfFilePath = storage_path('app/public/uploads/generated_pdf/' . $pdfFileName);
-    
-                try {
-                    $pdfTemplateHtml = '
-                    <html>
-                        <head>
-                            <style>
-                                body { font-family: Arial, sans-serif; }
-                                ul { list-style-type: none; padding: 0; }
-                                li { margin-bottom: 10px; }
-                                .label { font-weight: bold; }
-                            </style>
-                        </head>
-                        <body>
-                            <h1>Document for Row</h1>
-                            <ul>
-                                <li><span class="label">ID_DIPOTONG:</span> ' . ($row[4] ?? '') . '</li>
-                                <li><span class="label">NAMA:</span> ' . ($row[5] ?? '') . '</li>
-                                <li><span class="label">PASAL:</span> ' . ($row[8] ?? '') . '</li>
-                                <li><span class="label">KODE_OBJEK_PAJAK:</span> ' . ($row[9] ?? '') . '</li>
-                                <li><span class="label">NO_BUKTI_POTONG:</span> ' . ($row[0] ?? '') . '</li>
-                                <li><span class="label">TANGGAL_BUPOT:</span> ' . ($row[2] ?? '') . '</li>
-                                <li><span class="label">PPH_DIPOTONG:</span> ' . ($row[6] ?? '') . '</li>
-                                <li><span class="label">JUMLAH_BRUTO:</span> ' . ($row[7] ?? '') . '</li>
-                                <li><span class="label">KETERANGAN:</span> ' .  '-' . '</li>
-                            </ul>
-                        </body>
-                    </html>';
-
-                    $data = [
-
-                    ];
-    
-                    // $dompdf = new Dompdf();
-                    // $dompdf->loadHtml($pdfTemplateHtml);
-                    // $dompdf->setPaper('A4', 'portrait');
-                    // $dompdf->render();
-                    // file_put_contents($pdfFilePath, $dompdf->output());
-                } catch (\Exception $e) {
-                    Log::error('Error generating PDF: ' . $e->getMessage());
-                    continue; // Skip this row if PDF generation fails
-                }
-    
-                // Generate Excel file for each row
-                $rowSpreadsheet = new Spreadsheet();
-                $rowSheet = $rowSpreadsheet->getActiveSheet();
-                $rowSheet->fromArray([$header], NULL, 'A1'); // Add header
-                $rowSheet->fromArray($row, NULL, 'A2'); // Add data row
-    
-                $excelFileName = "{$formattedNpwp}_{$formattedIdentitas}_{$randomId}.xlsx";
-                $excelFilePath = storage_path('app/public/uploads/generated_excel/' . $excelFileName);
-                try {
-                    $rowWriter = new Xlsx($rowSpreadsheet);
-                    $rowWriter->save($excelFilePath);
-                } catch (\Exception $e) {
-                    Log::error('Error generating Excel file: ' . $e->getMessage());
-                    continue; // Skip this row if Excel generation fails
                 }
     
                 // Save to documents table
@@ -208,10 +100,6 @@ class UploadController extends Controller
                         'id_sistem'  => $row[16] ?? '',
                         'user_id' => $user->id
                     ]);
-
-
-
-
                 } catch (\Exception $e) {
                     Log::error('Error saving document to database: ' . $e->getMessage());
                     continue; // Skip this row if saving to database fails
